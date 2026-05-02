@@ -1,3 +1,5 @@
 figures/*
 *.png
+out_and_err/*
 *.lprof
+*.csv

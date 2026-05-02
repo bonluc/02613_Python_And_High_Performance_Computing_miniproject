@@ -1,8 +1,10 @@
 from os.path import join
 import sys
-import multiprocessing as mp
+from multiprocessing import Pool
 import numpy as np
-from math import ceil
+import math
+import time
+import csv
 
 
 def load_data(load_dir, bid):
@@ -43,10 +45,6 @@ def summary_stats(u, interior_mask):
 
 
 if __name__ == '__main__':
-
-    # Number of cores used for multiprocessing
-    NUM_WORKERS = 4
-
     # Load data
     LOAD_DIR = '/dtu/projects/02613_2025/data/modified_swiss_dwellings/'
     with open(join(LOAD_DIR, 'building_ids.txt'), 'r') as f:
@@ -58,39 +56,40 @@ if __name__ == '__main__':
         N = int(sys.argv[1])
     building_ids = building_ids[:N]
 
-    # Calculate how many buildings each worker should process
-    workload_per_worker = ceil(N / NUM_WORKERS)
- 
     # Load floor plans
     all_u0 = np.empty((N, 514, 514))
     all_interior_mask = np.empty((N, 512, 512), dtype='bool')
+    
+    
     for i, bid in enumerate(building_ids):
         u0, interior_mask = load_data(LOAD_DIR, bid)
         all_u0[i] = u0
         all_interior_mask[i] = interior_mask
 
-    # Split the data into chunks for each worker
-    u0_chunks = np.array_split(all_u0, NUM_WORKERS)
-    interior_mask_chunks = np.array_split(all_interior_mask, NUM_WORKERS)
-
     # Run jacobi iterations for each floor plan
     MAX_ITER = 20_000
     ABS_TOL = 1e-4
 
-    all_u = np.empty_like(all_u0)
+    almdahl_data = []
 
-    for i in range(workload_per_worker):
-        simulation_process = mp.Process(target=jacobi, args=(u0_chunks[i], interior_mask_chunks[i], MAX_ITER, ABS_TOL))
-        simulation_process.start()
-        simulation_process.join()
+    for num_workers in range(1, 21):
 
-    for i, (u0, interior_mask) in enumerate(zip(all_u0, all_interior_mask)):
-        u = jacobi(u0, interior_mask, MAX_ITER, ABS_TOL)
-        all_u[i] = u
+        simulation_arguments = [(u0, interior_mask, MAX_ITER, ABS_TOL) for u0, interior_mask in zip(all_u0, all_interior_mask)]
+        chunk_size = math.ceil(len(simulation_arguments)/num_workers)
+    
+        start_time = time.perf_counter()
 
-    # Print summary statistics in CSV format
-    stat_keys = ['mean_temp', 'std_temp', 'pct_above_18', 'pct_below_15']
-    print('building_id, ' + ', '.join(stat_keys))  # CSV header
-    for bid, u, interior_mask in zip(building_ids, all_u, all_interior_mask):
-        stats = summary_stats(u, interior_mask)
-        print(f"{bid},", ", ".join(str(stats[k]) for k in stat_keys))
+        with Pool(processes=num_workers) as pool:
+            results = pool.starmap(jacobi, simulation_arguments, chunksize=chunk_size)
+
+        end_time = time.perf_counter()
+        duration = end_time - start_time
+        almdahl_data.append((num_workers, duration))
+
+    # Save the timing data to a CSV file
+    csv_filename = 'amdahl_data.csv'
+    
+    with open(csv_filename, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(['Number of Cores', 'Duration in s'])
+        writer.writerows(almdahl_data)
