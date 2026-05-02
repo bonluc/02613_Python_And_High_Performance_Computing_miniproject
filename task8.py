@@ -34,7 +34,7 @@ def jacobi_CUDA_kernel(u,u_out,int_mask):
 def jacobi_CUDA_helper(u, interior_mask, max_iter, TPB):
     u = np.copy(u)
     d_u = cuda.to_device(u)
-    d_u_out=cuda.to_device(u)
+    d_u_out=cuda.device_array(u.shape)
 
     blockspergrid_x = (interior_mask.shape[0]+TPB[0]-1) // TPB[0]
     blockspergrid_y = (interior_mask.shape[1]+TPB[1]-1) // TPB[1]
@@ -50,7 +50,7 @@ def jacobi_CUDA_helper(u, interior_mask, max_iter, TPB):
 
     cuda.synchronize()
 
-    return d_u_out.copy_to_host()
+    return d_u.copy_to_host()
 
 def summary_stats(u, interior_mask):
     u_interior = u[1:-1, 1:-1][interior_mask]
