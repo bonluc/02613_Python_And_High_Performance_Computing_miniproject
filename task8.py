@@ -28,16 +28,16 @@ def jacobi_CUDA_kernel(u,u_out,int_mask):
             u_out[i+1,j+1]=u[i+1,j+1]
 
 
-threadsperblock=(16,16)
 
 
-def jacobi_CUDA_helper(u, interior_mask, max_iter):
+
+def jacobi_CUDA_helper(u, interior_mask, max_iter, TPB):
     u = np.copy(u)
     d_u = cuda.to_device(u)
     d_u_out=cuda.to_device(u)
 
-    blockspergrid_x = (interior_mask.shape[0]+threadsperblock[0]-1) // threadsperblock[0]
-    blockspergrid_y = (interior_mask.shape[1]+threadsperblock[1]-1) // threadsperblock[1]
+    blockspergrid_x = (interior_mask.shape[0]+TPB[0]-1) // TPB[0]
+    blockspergrid_y = (interior_mask.shape[1]+TPB[1]-1) // TPB[1]
     blockspergrid = (blockspergrid_x, blockspergrid_y)
 
     d_int_mask=cuda.to_device(interior_mask)
@@ -45,9 +45,10 @@ def jacobi_CUDA_helper(u, interior_mask, max_iter):
 
     for i in range(max_iter):
         # Compute average of left, right, up and down neighbors, see eq. (1)
-        jacobi_CUDA_kernel[blockspergrid,threadsperblock](d_u,d_u_out,d_int_mask)
-        cuda.synchronize()
+        jacobi_CUDA_kernel[blockspergrid,TPB](d_u,d_u_out,d_int_mask)
         d_u,d_u_out = d_u_out, d_u
+
+    cuda.synchronize()
 
     return d_u_out.copy_to_host()
 
@@ -88,7 +89,7 @@ if __name__ == '__main__':
         all_interior_mask[i] = interior_mask
 
     MAX_ITER = 20_000
-
+    threadsperblock=(32,32)
 
     blockspergrid_x = (all_interior_mask[0].shape[0]+threadsperblock[0]-1) // threadsperblock[0]
     blockspergrid_y = (all_interior_mask[0].shape[1]+threadsperblock[1]-1) // threadsperblock[1]
@@ -96,16 +97,15 @@ if __name__ == '__main__':
     d_u0_comp = cuda.to_device(all_u0[0])
     d_u0_out_comp= cuda.to_device(all_u0[0])
     d_int_mask_comp = cuda.to_device(all_interior_mask[0])
-    
     jacobi_CUDA_kernel[blockspergrid,threadsperblock](d_u0_comp,d_u0_out_comp,d_int_mask_comp)
 
     all_u=np.empty_like(all_u0)
     for i, (u0, interior_mask) in enumerate(zip(all_u0,all_interior_mask)):
-        all_u[i]=jacobi_CUDA_helper(u0,interior_mask,MAX_ITER)
+        all_u[i]=jacobi_CUDA_helper(u0,interior_mask,MAX_ITER, threadsperblock)
 
     # Print summary statistics in CSV format
-    stat_keys = ['mean_temp', 'std_temp', 'pct_above_18', 'pct_below_15']
+    """stat_keys = ['mean_temp', 'std_temp', 'pct_above_18', 'pct_below_15']
     print('building_id, ' + ', '.join(stat_keys))  # CSV header
     for bid, u, interior_mask in zip(building_ids, all_u, all_interior_mask):
         stats = summary_stats(u, interior_mask)
-        print(f"{bid},", ", ".join(str(stats[k]) for k in stat_keys))
+        print(f"{bid},", ", ".join(str(stats[k]) for k in stat_keys))"""
