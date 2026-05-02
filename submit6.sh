@@ -4,7 +4,7 @@
 #BSUB -q hpc
 #BSUB -W 25
 #BSUB -R "rusage[mem=512MB]"
-#BSUB -n 20
+#BSUB -n 16
 #BSUB -R "span[hosts=1]"
 #BSUB -o python_%J.out
 #BSUB -e python_%J.err
