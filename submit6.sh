@@ -13,4 +13,5 @@ source /dtu/projects/02613_2025/conda/conda_init.sh
 conda activate 02613_2026
 
 
-python task6.py 20
+python task6.py 50
+
