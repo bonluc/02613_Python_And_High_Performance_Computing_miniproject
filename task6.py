@@ -57,7 +57,7 @@ if __name__ == '__main__':
     
     
     n_workers = [1,2,4,8,16]
-    times=[]
+    amdahl_data_task6 = []
     for p in n_workers:
         start=time()
 
@@ -65,15 +65,12 @@ if __name__ == '__main__':
             results = [pool.apply_async(jacobi, (u0,interior_mask,MAX_ITER,ABS_TOL,)) 
                     for u0,interior_mask in zip(all_u0,all_interior_mask)]
             all_u = np.array([r.get() for r in results])
-    
-        times.append(time()-start)
-    
-    T1= times[0]
-    speedup=[T1/t for t in times]
-    print(speedup)
+        amdahl_data.append((p, time()-start)
 
-    plt.plot(n_workers,speedup,'o-')
-    plt.xlabel('num. of workers')
-    plt.ylabel('speedup')
-    plt.title('Speedup plot')
-    plt.savefig('speedup_dynamic.png')
+    
+csv_filename = 'amdahl_data_task6.csv'
+    
+with open(csv_filename, mode='w', newline='') as file:
+    writer = csv.writer(file)
+    writer.writerow(['Number of Cores', 'Duration in s'])
+    writer.writerows(almdahl_data)
