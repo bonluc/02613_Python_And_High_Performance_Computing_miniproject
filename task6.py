@@ -68,9 +68,9 @@ if __name__ == '__main__':
         amdahl_data.append((p, time()-start)
 
     
-csv_filename = 'amdahl_data_task6.csv'
+    csv_filename = 'amdahl_data_task6.csv'
     
-with open(csv_filename, mode='w', newline='') as file:
-    writer = csv.writer(file)
-    writer.writerow(['Number of Cores', 'Duration in s'])
-    writer.writerows(almdahl_data)
+    with open(csv_filename, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(['Number of Cores', 'Duration in s'])
+        writer.writerows(almdahl_data)
