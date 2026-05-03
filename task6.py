@@ -65,7 +65,7 @@ if __name__ == '__main__':
             results = [pool.apply_async(jacobi, (u0,interior_mask,MAX_ITER,ABS_TOL,)) 
                     for u0,interior_mask in zip(all_u0,all_interior_mask)]
             all_u = np.array([r.get() for r in results])
-        amdahl_data.append((p, time()-start)
+        amdahl_data_task6.append((p, time()-start)
 
     
     csv_filename = 'amdahl_data_task6.csv'
@@ -73,4 +73,4 @@ if __name__ == '__main__':
     with open(csv_filename, mode='w', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(['Number of Cores', 'Duration in s'])
-        writer.writerows(almdahl_data)
+        writer.writerows(amdahl_data_task6)
